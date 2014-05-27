@@ -1,1 +1,0 @@
-<li><a href="{$url}/forum/{$forum_breadcrumb_url}">{$forum_breadcrumb_title}</a> <span class="divider">/</span></li>

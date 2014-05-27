@@ -1,1 +1,0 @@
-<li>{$forum_breadcrumb_title}</li>
