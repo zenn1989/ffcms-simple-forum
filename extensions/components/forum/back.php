@@ -413,6 +413,7 @@ class components_forum_back {
                     'forum_category_empty' => 'В данном разделе еще нет активных форумов',
                 ),
             'back' => array(
+                'admin_components_forum.name' => 'Простой Форум',
                 'admin_components_forum.desc' => 'Реализация простого форума(/forum/) для сайта',
                 'admin_components_forum_category_title' => 'Разделы',
                 'admin_components_forum_settings_title' => 'Настройки',
@@ -511,6 +512,7 @@ class components_forum_back {
                     'forum_category_empty' => 'This category is still have no active forums',
                 ),
             'back' => array(
+                'admin_components_forum.name' => 'Simple forum',
                 'admin_components_forum.desc' => 'Simple component forum(/forum/) for customers',
                 'admin_components_forum_category_title' => 'Management',
                 'admin_components_forum_settings_title' => 'Settings',
