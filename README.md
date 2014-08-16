@@ -9,5 +9,7 @@
  * forum/moderate - возможность редактирования сообщений и тридов
  
 Компонент является абсолютно бесплатным и распространяется по лицензии GNU GPL V3. 
+
 Автор: Пятинский Михаил.
+
 Каталог FFCMS: [http://ffcms.ru/ru/extension/view/7.html](http://ffcms.ru/ru/extension/view/7.html)
