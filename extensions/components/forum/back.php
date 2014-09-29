@@ -23,6 +23,14 @@ class components_forum_back {
             self::$instance = new self();
         return self::$instance;
     }
+	
+	public function _version() {
+        return '1.0.1';
+    }
+
+    public function _compatable() {
+        return '2.0.2';
+    }
 
     public function make() {
         $content = null;
@@ -599,7 +607,7 @@ class components_forum_back {
         database::getInstance()->con()->query("UPDATE ".property::getInstance()->get('db_prefix')."_user_access_level SET permissions = CONCAT(permissions,';forum/post;forum/thread;forum/moderator') WHERE group_id = 2");
         database::getInstance()->con()->query("UPDATE ".property::getInstance()->get('db_prefix')."_user_access_level SET permissions = CONCAT(permissions,';forum/post;forum/thread;forum/moderator') WHERE group_id = 3");
         $configs = 'a:3:{s:14:"topic_in_forum";s:2:"10";s:13:"post_in_topic";s:2:"10";s:10:"post_delay";s:2:"60";}';
-        $stmt = database::getInstance()->con()->prepare("UPDATE ".property::getInstance()->get('db_prefix')."_extensions SET configs = ? WHERE dir = 'forum' AND type = 'components'");
+        $stmt = database::getInstance()->con()->prepare("UPDATE ".property::getInstance()->get('db_prefix')."_extensions SET configs = ?, `version` = '1.0.1', `compatable` = '2.0.2' WHERE dir = 'forum' AND type = 'components'");
         $stmt->bindParam(1, $configs, \PDO::PARAM_STR);
         $stmt->execute();
         $stmt = null;
