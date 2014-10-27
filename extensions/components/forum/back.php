@@ -15,25 +15,54 @@ use engine\property;
 use engine\extension;
 use engine\language;
 
-class components_forum_back {
-    protected static $instance = null;
-
-    public static function getInstance() {
-        if(is_null(self::$instance))
-            self::$instance = new self();
-        return self::$instance;
-    }
+class components_forum_back extends \engine\singleton {
 	
 	public function _update($from) {
-		database::getInstance()->con()->query("UPDATE ".property::getInstance()->get('db_prefix')."_extensions SET `version` = '1.0.1', `compatable` = '2.0.3' WHERE dir = 'forum' AND type = 'components'");
+        if($from == '1.0.1') {
+            $ru_data = array('ru' =>
+                array('front' =>
+                    array(
+                        'forum_threadmove_title' => 'Перемещение ветки',
+                        'forum_threadmove_desc' => 'Выберите новый раздел для данной ветки сообщений',
+                        'forum_threadmove_label_moveto' => 'Раздел',
+                        'forum_threadmove_btn_move' => 'Переместить',
+                        'forum_threadmove_btn_cancel' => 'Отмена'
+                    )));
+            $en_data = array('en' =>
+                array('front' =>
+                    array(
+                        'forum_threadmove_title' => 'Move thread',
+                        'forum_threadmove_desc' => 'Select new forum for this thread',
+                        'forum_threadmove_label_moveto' => 'Forum',
+                        'forum_threadmove_btn_move' => 'Move',
+                        'forum_threadmove_btn_cancel' => 'Cancel'
+                    )));
+            language::getInstance()->add($ru_data);
+            language::getInstance()->add($en_data);
+        }
+        database::getInstance()->con()->query("UPDATE ".property::getInstance()->get('db_prefix')."_extensions SET `version` = '1.0.2', `compatable` = '2.0.4' WHERE dir = 'forum' AND type = 'components'");
 	}
 	
 	public function _version() {
-        return '1.0.1';
+        return '1.0.2';
     }
 
     public function _compatable() {
-        return '2.0.3';
+        return '2.0.4';
+    }
+
+    public function _accessData() {
+        return array(
+            'admin/components/forum',
+            'admin/components/forum/list',
+            'admin/components/forum/catedit',
+            'admin/components/forum/catdel',
+            'admin/components/forum/forumedit',
+            'admin/components/forum/forumdel',
+            'admin/components/forum/catadd',
+            'admin/components/forum/forumadd',
+            'admin/components/forum/settings',
+        );
     }
 
     public function make() {
@@ -361,7 +390,7 @@ class components_forum_back {
         return template::getInstance()->twigRender('components/forum/del_cat.tpl', $params);
     }
 
-    public function install() {
+    public function _install() {
         $ru_data = array('ru' =>
             array('front' =>
                 array('forum_global_title' => 'Форум',
@@ -423,6 +452,11 @@ class components_forum_back {
                     'forum_notify_blocked' => 'Вы заблокированы на форуме и не можете добавлять сообщения',
                     'forum_notify_regmsg' => 'Зарегистрируйтесь на сайте чтобы иметь возможность добавлять сообщения',
                     'forum_category_empty' => 'В данном разделе еще нет активных форумов',
+                    'forum_threadmove_title' => 'Перемещение ветки',
+                    'forum_threadmove_desc' => 'Выберите новый раздел для данной ветки сообщений',
+                    'forum_threadmove_label_moveto' => 'Раздел',
+                    'forum_threadmove_btn_move' => 'Переместить',
+                    'forum_threadmove_btn_cancel' => 'Отмена'
                 ),
             'back' => array(
                 'admin_components_forum.name' => 'Простой Форум',
@@ -522,6 +556,11 @@ class components_forum_back {
                     'forum_notify_blocked' => 'You are blocked on the forum and can not add messages',
                     'forum_notify_regmsg' => 'Register on the our website to be able to add messages',
                     'forum_category_empty' => 'This category is still have no active forums',
+                    'forum_threadmove_title' => 'Move thread',
+                    'forum_threadmove_desc' => 'Select new forum for this thread',
+                    'forum_threadmove_label_moveto' => 'Forum',
+                    'forum_threadmove_btn_move' => 'Move',
+                    'forum_threadmove_btn_cancel' => 'Cancel'
                 ),
             'back' => array(
                 'admin_components_forum.name' => 'Simple forum',

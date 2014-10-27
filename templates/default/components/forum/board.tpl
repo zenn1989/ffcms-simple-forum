@@ -18,12 +18,12 @@
 {% if forum.topics %}
 <div class="row">
     <div class="col-md-12">
-        <div class="panel panel-info">
+        <div class="panel panel-primary">
             <div class="panel-heading">
                 {{ forum.name }}
             </div>
-            <div class="panel-body">
-                <table class="table table-responsive table-forum table-condensed">
+            <div class="panel-body panel-no-padding">
+                <table class="table table-forum table-bordered">
                     <thead>
                     <tr>
                         <th class="col-md-7">{{ language.forum_item_topic }}</th>

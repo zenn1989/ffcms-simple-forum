@@ -18,15 +18,7 @@ use engine\permission;
 use engine\meta;
 use engine\language;
 
-class components_forum_front {
-
-    protected static $instance = null;
-
-    public static function getInstance() {
-        if(is_null(self::$instance))
-            self::$instance = new self();
-        return self::$instance;
-    }
+class components_forum_front extends \engine\singleton {
 
     public function make() {
         $way = router::getInstance()->shiftUriArray();
@@ -59,6 +51,9 @@ class components_forum_front {
                 break;
             case 'setimportant':
                 $content = $this->viewThreadSetImportant($way[1]);
+                break;
+            case 'movethread':
+                $content = $this->viewThreadMove($way[1], $way[2]);
                 break;
             case 'unsetimportant':
                 $content = $this->viewThreadUnsetImportant($way[1]);
@@ -157,6 +152,45 @@ class components_forum_front {
 
         return template::getInstance()->twigRender('components/forum/setthread_important.tpl', $params);
 
+    }
+
+    private function viewThreadMove($tid, $fid) {
+        if(!system::getInstance()->isInt($tid) || !system::getInstance()->isInt($fid))
+            return null;
+        $params = array();
+
+        $stmt = database::getInstance()->con()->prepare("SELECT a.forum_id,a.forum_name,b.cat_name FROM `".property::getInstance()->get('db_prefix')."_com_forum_item` as a,
+            `".property::getInstance()->get('db_prefix')."_com_forum_category` as b WHERE a.category = b.cat_id AND a.forum_id != ?");
+        $stmt->bindParam(1, $fid, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        if($stmt->rowCount() < 1)
+            return null;
+
+        $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $stmt = null;
+
+        $params['thread']['id'] = $tid;
+
+        foreach($result as $row) {
+            $params['thread']['move'][$row['forum_id']] = $row['cat_name'] . ' - ' . $row['forum_name'];
+        }
+
+        if(system::getInstance()->post('submit')) {
+            $moveto = (int)system::getInstance()->post('new_forum');
+            if(array_key_exists($moveto, $params['thread']['move'])) {
+                $stmt = database::getInstance()->con()->prepare("UPDATE ".property::getInstance()->get('db_prefix')."_com_forum_thread SET thread_forum_depend = ? WHERE thread_id = ?");
+                $stmt->bindParam(1, $moveto, \PDO::PARAM_INT);
+                $stmt->bindParam(2, $tid, \PDO::PARAM_INT);
+                $stmt->execute();
+                $stmt = null;
+
+                $this->reCountForum($fid);
+                $this->reCountForum($moveto);
+            }
+            system::getInstance()->redirect('/forum/viewtopic/' . $tid);
+        }
+        return template::getInstance()->twigRender('components/forum/thread_move.tpl', $params);
     }
 
     private function viewThreadEdit($id) {
@@ -260,30 +294,7 @@ class components_forum_front {
             $stmt->execute();
             $stmt = null;
             // get info about other threads in forum
-            $stmt = database::getInstance()->con()->prepare("SELECT * FROM ".property::getInstance()->get('db_prefix')."_com_forum_thread WHERE thread_forum_depend = ? ORDER BY thread_updatetime DESC LIMIT 1");
-            $stmt->bindParam(1, $forum_id, \PDO::PARAM_INT);
-            $stmt->execute();
-            if($stmt->rowCount() == 1) {
-                $res = $stmt->fetch();
-                $stmt = null;
-                $stmt = database::getInstance()->con()->prepare("UPDATE ".property::getInstance()->get('db_prefix')."_com_forum_item SET
-                    forum_threads = forum_threads-1, forum_posts = forum_posts-".$post_delete_count.", forum_lastposter = ?, forum_lastupdate = ?, forum_lasttopic_id = ?
-                    WHERE forum_id = ?");
-                $stmt->bindParam(1, $res['thread_updater'], \PDO::PARAM_STR);
-                $stmt->bindParam(2, $res['thread_updatetime'], \PDO::PARAM_INT);
-                $stmt->bindParam(3, $res['thread_id'], \PDO::PARAM_INT);
-                $stmt->bindParam(4, $forum_id, \PDO::PARAM_INT);
-                $stmt->execute();
-                $stmt = null;
-            } else {
-                // no threads in forum, set null info
-                $stmt = database::getInstance()->con()->prepare("UPDATE ".property::getInstance()->get('db_prefix')."_com_forum_item SET
-                    forum_threads = forum_threads-1, forum_posts = forum_posts-".$post_delete_count.", forum_lastposter = '', forum_lastupdate = '', forum_lasttopic_id = ''
-                    WHERE forum_id = ?");
-                $stmt->bindParam(1, $forum_id, \PDO::PARAM_INT);
-                $stmt->execute();
-                $stmt = null;
-            }
+            $this->reCountForum($forum_id);
             system::getInstance()->redirect('/forum/viewboard/'.$forum_id);
         }
 
@@ -519,6 +530,7 @@ class components_forum_front {
         $params['forum']['name'] = $resultForumItem['forum_name'];
         $params['forum']['id'] = $resultForumItem['forum_id'];
         $params['forum']['thread']['id'] = $id;
+        $params['forum']['use_karma'] = extension::getInstance()->getConfig('use_karma', 'user', extension::TYPE_COMPONENT, 'bol');
         // уменьшаем кол-во запросов на получение информации о пользователях, выгружаем заранее
         $userlist = system::getInstance()->extractFromMultyArray('post_userid', $resultPostThread);
         $userlist = system::getInstance()->arrayAdd($resultMainThread['thread_starterid'], $userlist);
@@ -538,6 +550,8 @@ class components_forum_front {
                 'user_avatar' => user::getInstance()->buildAvatar('small', $resultMainThread['thread_starterid']),
                 'user_name' => user::getInstance()->get('nick', $resultMainThread['thread_starterid']),
                 'user_posts' => user::getInstance()->get('forum_posts', $resultMainThread['thread_starterid']),
+                'user_karma' => user::getInstance()->get('karma', $resultMainThread['thread_starterid']),
+                'can_change_karma' => user::getInstance()->canKarmaChange($resultMainThread['thread_starterid']),
                 'user_group' => user::getInstance()->get('group_name', $resultMainThread['thread_starterid']),
                 'post_time' => system::getInstance()->toDate($resultMainThread['thread_starttime'], 'h'),
                 'number' => 0,
@@ -553,6 +567,8 @@ class components_forum_front {
                 'user_avatar' => user::getInstance()->buildAvatar('small', $post['post_userid']),
                 'user_name' => user::getInstance()->get('nick', $post['post_userid']),
                 'user_posts' => user::getInstance()->get('forum_posts', $post['post_userid']),
+                'user_karma' => user::getInstance()->get('karma', $post['post_userid']),
+                'can_change_karma' => user::getInstance()->canKarmaChange($post['post_userid']),
                 'user_group' => user::getInstance()->get('group_name', $post['post_userid']),
                 'post_time' => system::getInstance()->toDate($post['post_time'], 'h'),
                 'number' => $post_number
@@ -654,6 +670,47 @@ class components_forum_front {
         if(sizeof($params['forum']) > 0)
             ksort($params['forum']);
         return template::getInstance()->twigRender('components/forum/main.tpl', $params);
+    }
+
+
+    private function reCountForum($forum_id = 0) {
+        if(!system::getInstance()->isInt($forum_id))
+            return null;
+        $stmt = null;
+        if($forum_id == 0) {
+            $stmt = database::getInstance()->con()->query("SELECT f.forum_id,COUNT(DISTINCT t.thread_id) as count_thread,COUNT(p.post_id) as count_post,t.thread_id,t.thread_updatetime,t.thread_updater
+                FROM ".property::getInstance()->get('db_prefix')."_com_forum_item as f
+                LEFT OUTER JOIN ".property::getInstance()->get('db_prefix')."_com_forum_thread as t ON f.forum_id = t.thread_forum_depend
+                LEFT OUTER JOIN ".property::getInstance()->get('db_prefix')."_com_forum_post as p ON t.thread_id = p.post_target_thread
+                GROUP BY f.forum_id
+				ORDER BY t.thread_updatetime DESC,p.post_time DESC");
+        } else {
+            $stmt = database::getInstance()->con()->prepare("SELECT f.forum_id,COUNT(DISTINCT t.thread_id) as count_thread,COUNT(p.post_id) as count_post,t.thread_id,t.thread_updatetime,t.thread_updater
+                FROM ".property::getInstance()->get('db_prefix')."_com_forum_item as f
+                LEFT OUTER JOIN ".property::getInstance()->get('db_prefix')."_com_forum_thread as t ON f.forum_id = t.thread_forum_depend
+                LEFT OUTER JOIN ".property::getInstance()->get('db_prefix')."_com_forum_post as p ON t.thread_id = p.post_target_thread
+                WHERE f.forum_id = ?
+                GROUP BY f.forum_id
+				ORDER BY t.thread_updatetime DESC,p.post_time DESC");
+            $stmt->bindParam(1, $forum_id, \PDO::PARAM_INT);
+            $stmt->execute();
+        }
+        $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $stmt = null;
+        foreach($result as $row) {
+            $stmt = database::getInstance()->con()->prepare("UPDATE " . property::getInstance()->get('db_prefix') . "_com_forum_item
+                    SET forum_threads = ?, forum_posts = ?, forum_lastposter = ?, forum_lastupdate = ?, forum_lasttopic_id = ? WHERE forum_id = ?");
+            if ($row['thread_updater'] == null)
+                $row['thread_updater'] = '';
+            $stmt->bindParam(1, $row['count_thread'], \PDO::PARAM_INT);
+            $stmt->bindParam(2, $row['count_post'], \PDO::PARAM_INT);
+            $stmt->bindParam(3, $row['thread_updater'], \PDO::PARAM_STR);
+            $stmt->bindParam(4, $row['thread_updatetime'], \PDO::PARAM_INT);
+            $stmt->bindParam(5, $row['thread_id'], \PDO::PARAM_INT);
+            $stmt->bindParam(6, $row['forum_id'], \PDO::PARAM_INT);
+            $stmt->execute();
+            $stmt = null;
+        }
     }
 
     private function updatePostCount($userid)

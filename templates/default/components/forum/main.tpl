@@ -12,13 +12,13 @@
 {% for thread_id,thread_data in forum %}
 <div class="row">
     <div class="col-md-12">
-        <div class="panel panel-info">
+        <div class="panel panel-primary">
             <div class="panel-heading">
                 {{ thread_data.name }}
             </div>
-            <div class="panel-body">
+            <div class="panel-body panel-no-padding">
                 {% if thread_data.forums %}
-                <table class="table table-responsive table-forum table-condensed">
+                <table class="table table-forum table-condensed">
                     <thead>
                     <tr>
                         <th class="col-md-7">{{ language.forum_list_part }}</th>
