@@ -42,7 +42,7 @@
                         <a href="{{ system.url }}/user/id{{ post.user_id }}"><strong>{{ post.user_name }}</strong></a><br/>
                         <a href="{{ system.url }}/user/id{{ post.user_id }}">
                             <img src="{{ system.script_url }}/{{ post.user_avatar }}" alt="{{ post.user_name }}" class="img-thumbnail"/>
-                        </a>
+                        </a> <br />
                         {{ language.forum_topic_messages }}: {{ post.user_posts }}
                         {% if forum.use_karma %}
                         <br />{{ language.usercontrol_profile_karma_title }}:
